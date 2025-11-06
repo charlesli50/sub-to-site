@@ -1,9 +1,9 @@
 import sys
 import aiohttp
 import asyncio
-from difflib import *
-from hashlib import sha256
-from pprint import pprint
+from difflib import unified_diff
+
+from filters.openaidiff import openai_filter
 
 
 async def subscribe_and_ping(url: str, script: str) -> None:
@@ -20,7 +20,7 @@ async def subscribe_and_ping(url: str, script: str) -> None:
                 ping_idx += 1
                 diff = []
 
-                if previous_html != None:
+                if previous_html is not None:
                     diff = list(
                         unified_diff(
                             previous_html.splitlines(),
@@ -29,12 +29,8 @@ async def subscribe_and_ping(url: str, script: str) -> None:
                             lineterm="",
                         )
                     )
-                    for d in diff:
-                        print(d)
-                    # if diff:
-                    #     pprint(diff)
 
-                if diff and previous_html != None:
+                if openai_filter(diff) and previous_html is not None:
                     print("Divergence Encountered! Publishing!")
                     return
 
@@ -56,4 +52,3 @@ if __name__ == "__main__":
     NETWORK_URL = args[1]
     TARGET_SCRIPT = args[2]
     asyncio.run(main(NETWORK_URL, TARGET_SCRIPT))
-
