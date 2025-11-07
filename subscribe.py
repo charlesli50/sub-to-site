@@ -1,13 +1,13 @@
 import sys
 import aiohttp
 import asyncio
-from difflib import *
-from hashlib import sha256
-from pprint import pprint
+from difflib import unified_diff
+
+from filters.openaidiff import openai_filter
+from filters.naivemetadiff import naive_meta_filter
 
 
 async def subscribe_and_ping(url: str, script: str) -> None:
-    # previous_html_hash = None
     previous_html = None
     ping_idx = 0
 
@@ -15,12 +15,10 @@ async def subscribe_and_ping(url: str, script: str) -> None:
         while True:
             async with session.get(url) as response:
                 new_html = await response.text()
-                # with open(f'/Users/charlesli/Documents/making/sub-to-site/test/response_{ping_idx}.html', 'w') as f:
-                #     f.write(html)
                 ping_idx += 1
                 diff = []
 
-                if previous_html != None:
+                if previous_html is not None:
                     diff = list(
                         unified_diff(
                             previous_html.splitlines(),
@@ -29,22 +27,17 @@ async def subscribe_and_ping(url: str, script: str) -> None:
                             lineterm="",
                         )
                     )
-                    for d in diff:
-                        print(d)
-                    # if diff:
-                    #     pprint(diff)
 
-                if diff and previous_html != None:
+                if naive_meta_filter(diff) and previous_html is not None:
                     print("Divergence Encountered! Publishing!")
                     return
 
                 previous_html = new_html
-                await asyncio.sleep(1)
+                await asyncio.sleep(5)
 
 
 async def main(NETWORK_URL: str, TARGET_SCRIPT: str):
     await subscribe_and_ping(NETWORK_URL, TARGET_SCRIPT)
-    # time.sleep(1)
 
 
 if __name__ == "__main__":
@@ -56,4 +49,3 @@ if __name__ == "__main__":
     NETWORK_URL = args[1]
     TARGET_SCRIPT = args[2]
     asyncio.run(main(NETWORK_URL, TARGET_SCRIPT))
-
